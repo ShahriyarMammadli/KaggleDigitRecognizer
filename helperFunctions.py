@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow.keras import layers, models
 import matplotlib.pyplot as plt
 from keras.callbacks import EarlyStopping
+from keras.utils.np_utils import to_categorical
 
 # Building CNN model
 def buildCNNModel(X_train, X_test, y_train, y_test, trainSize, testSize, predDf):
@@ -15,35 +16,35 @@ def buildCNNModel(X_train, X_test, y_train, y_test, trainSize, testSize, predDf)
     predDf = predDf / 255.0
     # Shaping the input size accordingly
     X_train = X_train.values.reshape(trainSize, 28,28, 1)
-    y_train = y_train.values
+    y_train = to_categorical(y_train.values, num_classes=10)
     X_test = X_test.values.reshape(testSize, 28, 28, 1)
-    y_test = y_test.values
+    y_test = to_categorical(y_test.values, num_classes=10)
     # Building a model
     model = models.Sequential()
     # Stage 1
-    model.add(layers.Conv2D(64, (3, 3), input_shape=(28, 28, 1)))
+    model.add(layers.Conv2D(32, (3, 3), input_shape=(28, 28, 1)))
     model.add(layers.BatchNormalization())
     model.add(layers.Activation("relu"))
-    model.add(layers.Conv2D(64, (3, 3), input_shape=(28, 28, 1)))
+    model.add(layers.Conv2D(32, (3, 3), input_shape=(28, 28, 1)))
     model.add(layers.BatchNormalization())
     model.add(layers.Activation("relu"))
     model.add(layers.MaxPooling2D((2, 2), padding="same"))
     model.add(layers.Dropout(0.25))
     # Stage 2
-    model.add(layers.Conv2D(128, (3, 3)))
+    model.add(layers.Conv2D(64, (3, 3)))
     model.add(layers.BatchNormalization())
     model.add(layers.Activation("relu"))
-    model.add(layers.Conv2D(128, (3, 3)))
+    model.add(layers.Conv2D(64, (3, 3)))
     model.add(layers.BatchNormalization())
     model.add(layers.Activation("relu"))
     model.add(layers.MaxPooling2D((2, 2), padding="same"))
     model.add(layers.Dropout(0.25))
     # Stage 3
     model.add(layers.Flatten())
-    model.add(layers.Dense(512))
+    model.add(layers.Dense(256))
     model.add(layers.Activation("relu"))
     model.add(layers.Dropout(0.25))
-    model.add(layers.Dense(512))
+    model.add(layers.Dense(256))
     model.add(layers.Activation("relu"))
     model.add(layers.Dropout(0.5))
 
@@ -52,13 +53,13 @@ def buildCNNModel(X_train, X_test, y_train, y_test, trainSize, testSize, predDf)
     model.summary()
     # Using adamax optimizer, run the model
     model.compile(optimizer='adamax',
-                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                  loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
                   metrics=['accuracy'])
     # Putting early stopping to avoid overtraining
     earlyStopping = EarlyStopping(monitor="val_accuracy",
                                   mode='auto', patience=30,
                                   restore_best_weights=True)
-    history = model.fit(X_train, y_train, epochs=30,
+    history = model.fit(X_train, y_train, epochs=100,
                         validation_data=(X_test, y_test), callbacks=[earlyStopping])
     # Plot train loss vs validation loss to observe fitting details
     plt.plot(history.history['accuracy'], label='accuracy')
